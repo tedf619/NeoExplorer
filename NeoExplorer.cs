@@ -94,7 +94,7 @@ public partial class NeoExplorer : UserControl
     columnHeaderName.Width = -2; // autosize last column
   }
 
-  void lLstViewObjectsFound_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+  void ListViewObjectsFound_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
   {
     if (e.Item == null) return;
     ShowDetails(e.Item);

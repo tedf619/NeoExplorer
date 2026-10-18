@@ -105,7 +105,7 @@
       listViewObjectsFound.TabIndex = 0;
       listViewObjectsFound.UseCompatibleStateImageBehavior = false;
       listViewObjectsFound.View = View.Details;
-      listViewObjectsFound.ItemSelectionChanged += lLstViewObjectsFound_ItemSelectionChanged;
+      listViewObjectsFound.ItemSelectionChanged += ListViewObjectsFound_ItemSelectionChanged;
       // 
       // columnHeaderId
       // 
