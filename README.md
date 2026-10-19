@@ -92,8 +92,113 @@ public partial class NeoExplorer : UserControl
 ```
 *Listing 1* - The code related to the retrieval of NEO data.
 
-Once the data downloaded, it is displayed in the ListView, which ends up looking something like this:
+The NASA API requires an api key with each request. You can use the default key "DEMO_KEY" for limited use. If you exceed NASA's hourly threshold, you'll start seeing HTTP error "429 (Too Many Requests)". To avoid this problem, go to ```api.nasa.gov``` and get a free personal key. You can use this key in two different ways:
 
+1. By saving the key as a Windows Environment variable. This way you don't have to embed the key in your code. This is the approach I took. I used the variable name "NASA_API_KEY".
+2. By embedding the key directly in the source code in the FormMain constructor. Replace the line:
+
+```csharp
+  neoExplorer.ApiKey = Environment.GetEnvironmentVariable("NASA_API_KEY") ?? "DEMO_KEY";
+```
+with the line:
+```csharp
+  neoExplorer.ApiKey = <your-api-key>;
+```
+
+## Handling the NEO Response Data
+NASA returns the NEO data in JSON format. I could have consumed this data directly, using System.Text.Json methods to extract the various pieces of NEO data. This works okay for simple JSON responses. For more complex data, it is easier to deserialize the JSON into C# objects, often called *Models* or *DTOs* (Data Transfer Objects). I used Google Gemini to generate the Model classes for me. The prompt was:
+
+```Create C# classes I can use to deserialize the JSON code returned by api.nasa.gov/neo/rest/v1/feed```. 
+
+Gemini produced the following code:
+
+```csharp
+public class NeoFeedResponse
+{
+  [JsonPropertyName("links")]
+  public PaginationLinks Links { get; set; } = new();
+
+  [JsonPropertyName("element_count")]
+  public int ElementCount { get; set; }
+
+  /// <summary>
+  /// Keyed by date string (e.g., "2026-06-01"), containing a list of Near Earth Objects for that day.
+  /// </summary>
+  [JsonPropertyName("near_earth_objects")]
+  public Dictionary<string, List<NearEarthObject>> NearEarthObjects { get; set; } = new();
+}
+
+public class NearEarthObject
+{
+  [JsonPropertyName("links")]
+  public ObjectLinks Links { get; set; } = new();
+
+  [JsonPropertyName("id")]
+  public string Id { get; set; } = string.Empty;
+
+  [JsonPropertyName("neo_reference_id")]
+  public string NeoReferenceId { get; set; } = string.Empty;
+
+  [JsonPropertyName("name")]
+  public string Name { get; set; } = string.Empty;
+
+  [JsonPropertyName("nasa_jpl_url")]
+  public string NasaJplUrl { get; set; } = string.Empty;
+
+  [JsonPropertyName("absolute_magnitude_h")]
+  public double AbsoluteMagnitudeH { get; set; }
+
+  [JsonPropertyName("estimated_diameter")]
+  public EstimatedDiameter EstimatedDiameter { get; set; } = new();
+
+  [JsonPropertyName("is_potentially_hazardous_asteroid")]
+  public bool IsPotentiallyHazardousAsteroid { get; set; }
+
+  [JsonPropertyName("close_approach_data")]
+  public List<CloseApproachData> CloseApproachData { get; set; } = new();
+
+  [JsonPropertyName("is_sentry_object")]
+  public bool IsSentryObject { get; set; }
+}
+
+public class CloseApproachData
+{
+  [JsonPropertyName("close_approach_date")]
+  public string CloseApproachDate { get; set; } = string.Empty;
+
+  [JsonPropertyName("close_approach_date_full")]
+  public string CloseApproachDateFull { get; set; } = string.Empty;
+
+  [JsonPropertyName("epoch_date_close_approach")]
+  public long EpochDateCloseApproach { get; set; }
+
+  [JsonPropertyName("relative_velocity")]
+  public RelativeVelocity RelativeVelocity { get; set; } = new();
+
+  [JsonPropertyName("miss_distance")]
+  public MissDistance MissDistance { get; set; } = new();
+
+  [JsonPropertyName("orbiting_body")]
+  public string OrbitingBody { get; set; } = string.Empty;
+}
+
+public class PaginationLinks { ... }
+
+public class ObjectLinks { ... }
+
+public class EstimatedDiameter { ... }
+
+public class DiameterUnit { ... }
+
+public class RelativeVelocity { ... }
+```
+*Listing 2* - The Model classes used to handle the NASA API's response JSON.
+
+In the interest of brevity, I commented out the lower level classes.
+<br>
+
+## Displaying the NEO Data
+After downloading and deserializing the data into the various classes shown above, it is displayed in the ListView, which ends up looking something like this:
 
 <img width="233" height="307" alt="image" src="https://github.com/user-attachments/assets/6f0a8a1a-60d3-4cbb-8cda-1da5b5669ae5" />
 
@@ -137,7 +242,7 @@ public partial class NeoExplorer : UserControl
     return listViewObjectsFound.Items.Count;
   }
   ```
-*Listing 2* - Populating the ListView with data grouped by date.
+*Listing 3* - Populating the ListView with data grouped by date.
 
 Selecting a NEO in the ListView fires a ListViewObjectsFound_ItemSelectionChanged event that handles the display of relevant NEO properties like this:
 
@@ -176,7 +281,7 @@ Selecting a NEO in the ListView fires a ListViewObjectsFound_ItemSelectionChange
     panelRight.Visible = true;
   }
 ```
-*Listing 3* - Showing the details of a selected NEO.
+*Listing 4* - Showing the details of a selected NEO.
 
 ## The Main Form
 
@@ -231,7 +336,7 @@ public partial class FormMain : Form
   }
 }
 ```
-*Listing 4* - Showing main form code.
+*Listing 5* - Showing main form code.
 
 ## Acknowlegements
 
