@@ -57,6 +57,12 @@ You can further filter the results by checking the **Potentially Hazardous** and
 1. *Potentially Hazardous*. A NEO that comes within 7.5 million kilometers of Earth's orbit and has an absolute magnitude under 22 (making its diameter at least 140 meters).
 2. *Sentry Objects*. A NEO tagged in NASA's Sentry, system, an automated collision-monitoring system. Sentry objects are considered to possibly hit the Earth in the next 100 years.
 
+The following figure shows the sequence diagram of the overall system.
+
+<img width="739" height="536" alt="image" src="https://github.com/user-attachments/assets/2688d43f-4752-4410-9928-023af91dc3f5" />
+
+*Figure 4* - The sequence diagram of the app.
+
 The following listing shows the code for FormMain.
 
 ```csharp
@@ -256,7 +262,7 @@ After downloading and deserializing the data into the various classes shown abov
 
 <img width="233" height="307" alt="image" src="https://github.com/user-attachments/assets/6f0a8a1a-60d3-4cbb-8cda-1da5b5669ae5" />
 
-*Figure 4* - The ListView, showing NEOs grouped by date.
+*Figure 5* - The ListView, showing NEOs grouped by date.
 
 The code to populate the grouped ListView is shown in the following listing.
 
