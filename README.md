@@ -16,14 +16,6 @@ The following figure shows NeoExplorer in action.
 
 *Figure 1* - The app showing celestial objects and their properties. 
 
-The start and end dates default to covering yesterday and today. The NASA service rejects requests that cover more than seven days. By clicking the **Search for Objects** button the app queries the NASA online service at ```api.nasa.gov//neo``` to get a list of NEOs in the given period.
-
-By default, all the NEOs whose magnitude (brightness) is below the given value are displayed. Note that counterintuitively, brightness increases with lower values in magnitude. 
-You can further filter the results by checking the **Potentially Hazardous** and **Sentry Objects** checkboxes. NASA tags asteroids like this:
-
-1. *Potentially Hazardous*. A NEO that comes within 7.5 million kilometers of Earth's orbit and has an absolute magnitude under 22 (making its diameter at least 140 meters).
-2. *Sentry Objects*. A NEO tagged in NASA's Sentry, system, an automated collision-monitoring system. Sentry objects are considered to possibly hit the Earth in the next 100 years.
-
 ## The UI Layout
 
 The user interface uses two layers of docked panels for its layout, as shown in the following figure.
@@ -56,7 +48,69 @@ As always, the panel with Dock=Fill must be added last, so the panels must be ad
   3. PanelRight.
 
 ## How it Works
-The main form of the app is just used to setup the layout and handle user interactions with the UI controls. The interesting stuff is mostly in NeoExplorer, derived from UserControl. NeoExplorer handles the download and display of the NEO data. The download of data is achieved with code like this:
+The main form of the app is just used to setup the layout and handle user interactions with the UI controls. The start and end dates default to covering yesterday and today. The NASA service rejects requests that cover more than seven days. By clicking the **Search for Objects** button the app queries the NASA online service at ```api.nasa.gov/neo``` to get a list of NEOs in the given period.
+
+By default, all the NEOs whose magnitude (brightness) is below the given value are displayed. Note that counterintuitively, brightness increases with lower values in magnitude. 
+<br><br>
+You can further filter the results by checking the **Potentially Hazardous** and **Sentry Objects** checkboxes. NASA tags asteroids like this:
+
+1. *Potentially Hazardous*. A NEO that comes within 7.5 million kilometers of Earth's orbit and has an absolute magnitude under 22 (making its diameter at least 140 meters).
+2. *Sentry Objects*. A NEO tagged in NASA's Sentry, system, an automated collision-monitoring system. Sentry objects are considered to possibly hit the Earth in the next 100 years.
+
+The following listing shows the code for FormMain.
+
+```csharp
+public partial class FormMain : Form
+{
+  public FormMain()
+  {
+    InitializeComponent();
+
+    dateTimePickerStartDate.Value = DateTime.Now.AddDays(-1);
+    dateTimePickerEndDate.Value = DateTime.Now;
+
+    // get the NASA api key from the environment, so we don't expose the key in code
+    neoExplorer.ApiKey = Environment.GetEnvironmentVariable("NASA_API_KEY") ?? "DEMO_KEY";
+
+    panelMiddle.Visible = false;  // we'll make it visible after a Search is performed
+
+    ShowStatusBarMessage("Perform a Search to see results");
+  }
+
+  async void ButtonSearchForObjects_Click(object sender, EventArgs e)
+  {
+    DateTime startDate = dateTimePickerStartDate.Value;
+    DateTime endDate = dateTimePickerEndDate.Value;
+
+    if (endDate.Subtract(startDate).Days >=7)
+    {
+      MessageBox.Show("The date range must be less than 7 days.", "Invalid Date Range");
+      return;
+    }
+
+    neoExplorer.FaintestMagnitude = (float)numericUpDownFaintestMagnitude.Value;
+    neoExplorer.IsPotentiallyHazardous = checkBoxPotentiallyHazardous.Checked;
+    neoExplorer.IsSentry = checkBoxSentryObjects.Checked;
+
+    UseWaitCursor = true;
+    ShowStatusBarMessage("Searching...");
+
+    int objectsFound = await neoExplorer.GetNearEarthObjectsAsync(startDate, endDate);
+    panelMiddle.Visible = true;
+    
+    ShowStatusBarMessage($"Objects found: {objectsFound}");
+    UseWaitCursor = false;
+  }
+
+  void ShowStatusBarMessage(string message)
+  {
+    labelStatusMessage.Text = message;
+  }
+}
+```
+*Listing 1* - The code for the main form, which hosts NeoExplorer.
+
+The interesting stuff is mostly in NeoExplorer, derived from UserControl. It fills most of FormMain's surface. NeoExplorer handles the download and display of the NEO data. The download of data is achieved with code like this:
 
 ```csharp
 public partial class NeoExplorer : UserControl
@@ -90,7 +144,7 @@ public partial class NeoExplorer : UserControl
   }
 }
 ```
-*Listing 1* - The code related to the retrieval of NEO data.
+*Listing 2* - The code related to the retrieval of NEO data.
 
 The NASA API requires an api key with each request. You can use the default key "DEMO_KEY" for limited use. If you exceed NASA's hourly threshold, you'll start seeing HTTP error "429 (Too Many Requests)". To avoid this problem, go to ```api.nasa.gov``` and get a free personal key. You can use this key in two different ways:
 
@@ -192,7 +246,7 @@ public class DiameterUnit { ... }
 
 public class RelativeVelocity { ... }
 ```
-*Listing 2* - The Model classes used to handle the NASA API's response JSON.
+*Listing 3* - The Model classes used to handle the NASA API's response JSON.
 
 In the interest of brevity, I commented out the lower level classes.
 <br>
@@ -242,7 +296,7 @@ public partial class NeoExplorer : UserControl
     return listViewObjectsFound.Items.Count;
   }
   ```
-*Listing 3* - Populating the ListView with data grouped by date.
+*Listing 4* - Populating the ListView with data grouped by date.
 
 Selecting a NEO in the ListView fires a ListViewObjectsFound_ItemSelectionChanged event that handles the display of relevant NEO properties like this:
 
@@ -281,63 +335,10 @@ Selecting a NEO in the ListView fires a ListViewObjectsFound_ItemSelectionChange
     panelRight.Visible = true;
   }
 ```
-*Listing 4* - Showing the details of a selected NEO.
+*Listing 5* - Showing the details of a selected NEO.
 
-## The Main Form
-
-The main form is pretty simple. Essentially it hosts the docked panels on which the various controls are placed. It also handles the events from the controls, delegating them to NeoExplorer. The following listing shows the code.
-
-```csharp
-public partial class FormMain : Form
-{
-  public FormMain()
-  {
-    InitializeComponent();
-
-    dateTimePickerStartDate.Value = DateTime.Now.AddDays(-1);
-    dateTimePickerEndDate.Value = DateTime.Now;
-
-    // get the NASA api key from the environment, so we don't expose the key in code
-    neoExplorer.ApiKey = Environment.GetEnvironmentVariable("NASA_API_KEY") ?? "DEMO_KEY";
-
-    panelMiddle.Visible = false;  // we'll make it visible after a Search is performed
-
-    ShowStatusBarMessage("Perform a Search to see results");
-  }
-
-  async void ButtonSearchForObjects_Click(object sender, EventArgs e)
-  {
-    DateTime startDate = dateTimePickerStartDate.Value;
-    DateTime endDate = dateTimePickerEndDate.Value;
-
-    if (endDate.Subtract(startDate).Days >=7)
-    {
-      MessageBox.Show("The date range must be less than 7 days.", "Invalid Date Range");
-      return;
-    }
-
-    neoExplorer.FaintestMagnitude = (float)numericUpDownFaintestMagnitude.Value;
-    neoExplorer.IsPotentiallyHazardous = checkBoxPotentiallyHazardous.Checked;
-    neoExplorer.IsSentry = checkBoxSentryObjects.Checked;
-
-    UseWaitCursor = true;
-    ShowStatusBarMessage("Searching...");
-
-    int objectsFound = await neoExplorer.GetNearEarthObjectsAsync(startDate, endDate);
-    panelMiddle.Visible = true;  // to show the ListView of NEOs found
-    
-    ShowStatusBarMessage($"Objects found: {objectsFound}");
-    UseWaitCursor = false;
-  }
-
-  void ShowStatusBarMessage(string message)
-  {
-    labelStatusMessage.Text = message;
-  }
-}
-```
-*Listing 5* - Showing main form code.
+That's basically it! Two main classes: FormMain and NeoExplorer. Pretty straightforward.
 
 ## Acknowlegements
 
-Many thanks to Google Gemini.
+Many thanks to Google Gemini for the generation of the Model classes.
